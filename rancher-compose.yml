@@ -1,0 +1,71 @@
+version: '2'
+services:
+  workspace:
+    image: your/laradock_workspace:latest
+    environment:
+      REDIS_PORT: '6379'
+    stdin_open: true
+    working_dir: /var/www/app
+    links:
+    - redis:redis
+    volumes_from:
+    - phpfpmdir
+    labels:
+      io.rancher.container.pull_image: always
+  phpfpmdir:
+    image: your/laradock_applications:latest
+    links:
+    - redis:redis
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.container.start_once: 'true'
+  nginx:
+    image: your/laradock_nginx:latest
+    stdin_open: true
+    working_dir: /var/www/app
+    tty: true
+    links:
+    - php-fpm:php-fpm
+    volumes_from:
+    - nginxdir
+    expose:
+    - '80'
+    - '443'
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: nginxdir
+  nginxdir:
+    image: your/laradock_applications:latest
+    stdin_open: true
+    tty: true
+    links:
+    - php-fpm:php-fpm
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.container.start_once: 'true'
+  php-fpm:
+    image: your/laradock_php-fpm:latest
+    environment:
+      PHP_IDE_CONFIG: laradock
+      REDIS_PORT: '6379'
+    stdin_open: true
+    working_dir: /var/www/app
+    tty: true
+    links:
+    - redis:redis
+    volumes_from:
+    - phpfpmdir
+    expose:
+    - '9000'
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: workspace,phpfpmdir
+  redis:
+    image: your/laradock_redis:latest
+    stdin_open: true
+    working_dir: /data
+    tty: true
+    expose:
+    - '6379'
+    labels:
+      io.rancher.container.pull_image: always
